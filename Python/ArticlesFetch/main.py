@@ -1,18 +1,16 @@
-import os
-import re
-import random
-import string
-import pickle
 import http.client
 import json
-
+import os
+import pickle
+import random
+import re
+import string
+from termcolor import colored
 from collections import defaultdict
 
 from nltk import FreqDist, word_tokenize
 from nltk.corpus import stopwords
-
 from sklearn import metrics
-from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.naive_bayes import MultinomialNB
 
@@ -26,10 +24,10 @@ BASE_DIR = os.getcwd()
 def create_data_set():
     with open('data.txt', 'w', encoding='utf-8') as outfile:
         for label in LABELS:
-            dir = '%s/NewsArticles/%s' % (BASE_DIR, label)
-            for filename in os.listdir(dir):
-                fullfilename = '%s/%s' % (dir, filename)
-                with open(fullfilename, 'rb') as file:
+            directory = '%s/NewsArticles/%s' % (BASE_DIR, label)
+            for filename in os.listdir(directory):
+                full_filename = '%s/%s' % (directory, filename)
+                with open(full_filename, 'rb') as file:
                     text = file.read().decode(errors='replace').replace('\n', '')
                     outfile.write('%s\t%s\t%s\n' % (label, filename, text))
 
@@ -70,7 +68,7 @@ def get_tokens(text):
 
 
 def lemmatizer(txt):
-    txt = re.sub(r'\W', ' ', txt)
+    txt = re.sub(r"\W", ' ', txt)
     txt = re.sub(r'\s+[a-zA-Z]\s+', ' ', txt)
     txt = re.sub(r'\^[a-zA-Z]\s+', ' ', txt)
     txt = re.sub(r'\s+', ' ', txt, flags=re.I)
@@ -132,10 +130,22 @@ def classify(title, text):
     vectorizer = pickle.load(open(vec_filename, 'rb'))
 
     pred = nb_clf.predict(vectorizer.transform([text]))
-    d = {}
-    d[title] = pred[0]
-    print(json.dumps(d))
+    print(colored('Краткая аннотация текста: '.ljust(35), 'red') + colored(title, 'blue', attrs=['blink']))
+    print(colored('Предположительная тема текста: '.ljust(35), 'yellow') + colored(pred[0].upper(), 'magenta',
+                                                                                   attrs=['bold', 'underline']))
+    save_files(title, pred[0])
+    print(colored('\n ******* \n', 'green'))
+    # d = {title: pred[0]}
+    # print(json.dumps(d))
 
+
+def save_files(title, topic):
+    title = title.split(':')[0] if len(title.split(':')) > 1 else title
+    if not os.path.exists('Saved/' + topic):
+        os.makedirs('Saved/' + topic)
+    if not os.path.isfile('Saved/' + topic + '/' + title + ".txt"):
+        with open('Saved/' + topic + '/' + title + ".txt", "w") as file:
+            file.write(title)
 
 def fetch_articles():
     conn = http.client.HTTPSConnection("newscatcher.p.rapidapi.com")
@@ -157,9 +167,10 @@ def fetch_articles():
 
 if __name__ == '__main__':
     fetch_articles()
-    # docs = setup_docs()
-    # print_frequency_dist(docs)
+    # all_docs = setup_docs()
+    # print_frequency_dist(all_docs)
 
-    # train_classifier(docs)
+    # train_classifier(all_docs)
     # create_data_set()
-    # print(lemmatizer(text))
+    # print(all_docs[0][1])
+    # print(lemmatizer(all_docs[0][1]))
